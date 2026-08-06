@@ -1,0 +1,40 @@
+PYTHON ?= python3
+VENV_DIR ?= .venv
+SRC = hachage.py
+
+VENV_PYTHON = $(VENV_DIR)/bin/python3
+VENV_PIP = $(VENV_DIR)/bin/pip
+
+.PHONY: install run debug clean lint lint-strict package
+
+$(VENV_DIR)/bin/activate:
+	$(PYTHON) -m venv $(VENV_DIR)
+	$(VENV_PIP) install --upgrade pip -q
+
+install: $(VENV_DIR)/bin/activate
+	$(VENV_PIP) install -r requirements-dev.txt
+
+run: $(VENV_DIR)/bin/activate
+	$(VENV_PYTHON) $(SRC)
+
+debug: $(VENV_DIR)/bin/activate
+	$(VENV_PYTHON) -m $(SRC)
+
+lint: install
+	$(VENV_DIR)/bin/flake8 --exclude=$(VENV_DIR) .
+	$(VENV_DIR)/bin/mypy --warn-return-any --warn-unused-ignores \
+		--ignore-missing-imports --disallow-untyped-defs \
+		--check-untyped-defs --exclude $(VENV_DIR) .
+
+lint-strict: install
+	$(VENV_DIR)/bin/flake8 --exclude=$(VENV_DIR) .
+	$(VENV_DIR)/bin/mypy . --strict --exclude $(VENV_DIR)
+	
+package: $(VENV_DIR)/bin/activate
+	$(VENV_PYTHON) -m build --sdist --wheel -o dist
+	cp dist/*.whl .
+	cp dist/*.tar.gz .
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	rm -rf .mypy_cache .pytest_cache build mazegen.egg-info dist
